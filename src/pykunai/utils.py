@@ -6,7 +6,7 @@ from typing import Generator
 from .event import Event, JqDict
 
 
-def decode_events(path: str) -> Generator[JqDict, None, None]:
+def decode_events(path: str) -> Generator[Event, None, None]:
     if path == "-":
         for line in map(lambda x: x.strip(), sys.stdin):
             yield Event(JqDict(json.loads(line)))

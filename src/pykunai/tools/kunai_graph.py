@@ -8,6 +8,7 @@ import tempfile
 import uuid
 
 from pykunai.event import JqDict
+from pykunai.graph import KunaiGraph
 
 
 def decode_logs(path):

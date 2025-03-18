@@ -65,15 +65,33 @@ class Event:
 
 
 class Task:
+    MAX_NODE_KIND_COUNT = 4096
+
     def __init__(self, root: Event):
         self.root = root
         self.nodes = []
         self.clones = []
         self.attributes = set()
         self.capa = set()
+        self._limits = {}
 
     def add(self, node: Event):
-        self.nodes.append(node)
+        # we append only if we didn't reach the maximum
+        # number of events of this kind
+        if not self.reached_node_limit(node):
+            self.nodes.append(node)
+            self._update_limits(node)
+
+    def _update_limits(self, node: Event):
+        if node.kind() not in self._limits:
+            self._limits[node.kind()] = 1
+        else:
+            self._limits[node.kind()] += 1
+
+    def reached_node_limit(self, node: Event) -> bool:
+        if node.kind() not in self._limits:
+            return False
+        return self._limits[node.kind()] > self.MAX_NODE_KIND_COUNT
 
     def set_attr(self, *attrs):
         for attr in attrs:
@@ -190,8 +208,13 @@ class KunaiGraph:
         return guuid in self._tasks
 
     def from_iterator(self, iterator):
+        for jq_dict in iterator:
+            self.update(jq_dict)
+        self.finalize()
+
+    def from_event_iterator(self, iterator):
         for event in iterator:
-            self.update(event)
+            self.update(event.jq_dict())
         self.finalize()
 
     def update(self, jq_dict: JqDict):
@@ -210,7 +233,6 @@ class KunaiGraph:
             if evt.task_uuid not in self._tasks:
                 self._tasks[evt.task_uuid] = Task(evt)
             else:
-                # print(len(self._tasks[evt.task_uuid].nodes))
                 self._tasks[evt.task_uuid].root = evt
 
         elif event_type == "clone":
@@ -251,6 +273,7 @@ class KunaiGraph:
                 "fillcolor": "white",
             },
             edge_attr={"fontname": "Arial", "labelangle": "-180.0"},
+            graph_attr={"bgcolor": "transparent"},
         )
 
         for task in self._tasks.values():
