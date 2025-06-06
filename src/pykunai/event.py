@@ -107,6 +107,7 @@ class Query(object):
         self.recurse = recurse
         self.filter_in = set()
         self.filter_out = set()
+        self.exe_paths_hit_once = set()
 
     def is_empty(self) -> bool:
         return len(self.hashes) == 0 and len(self.guids) == 0 and len(self.regexes) == 0
@@ -118,6 +119,10 @@ class Query(object):
             if len(guid) != 36:
                 raise GuidFormat()
             self.guids.add(guid)
+
+    def add_exe_path_hit_once(self, paths: List[str]) -> None:
+        for f in paths:
+            self.exe_paths_hit_once.add(f)
 
     def add_hashes(self, hashes: List[str]) -> None:
         for h in hashes:
@@ -194,7 +199,14 @@ class Query(object):
                         return True
 
             # check for event data
-            if "data" in event:
+            if ".data.exe.path" in event:
+                # we check for the filename
+                path = event[".data.exe.path"]
+                if path in self.exe_paths_hit_once:
+                    self._update(event)
+                    self.exe_paths_hit_once.remove(path)
+                    return True
+
                 # if create process
                 if (
                     task_info["guuid"] in self.guids

@@ -41,6 +41,9 @@ def main():
     parser.add_argument("-c", "--hashes", type=str, help="Search by hash (comma split)")
     parser.add_argument("-F", "--file", type=str, help="Hash file and search by hash")
     parser.add_argument(
+        "-p", "--paths", type=str, help="Search by exe path (comma split)"
+    )
+    parser.add_argument(
         "-f",
         "--filters",
         type=str,
@@ -66,6 +69,8 @@ def main():
         query.add_regexp(args.regexes.split(","))
     if args.filters:
         query.add_filters(args.filters.split(","))
+    if args.paths:
+        query.add_exe_path_hit_once(args.paths.split(","))
 
     for event in eg:
         if query.match(event):
