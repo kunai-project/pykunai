@@ -198,7 +198,7 @@ class Query(object):
                     if self._filtered_in(eid):
                         return True
 
-            # check for event data
+            # check for path
             if ".data.exe.path" in event:
                 # we check for the filename
                 path = event[".data.exe.path"]
@@ -207,7 +207,8 @@ class Query(object):
                     self.exe_paths_hit_once.remove(path)
                     return True
 
-                # if create process
+            # check for event data
+            if "data" in event:
                 if (
                     task_info["guuid"] in self.guids
                     or ptask_info["guuid"] in self.guids
