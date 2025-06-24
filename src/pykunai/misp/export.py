@@ -220,7 +220,6 @@ class KunaiMispEvent:
 
         # try to find URLs in command line
         command_line = kunai_event[".data.command_line"]
-        print("parsing command line")
         for url in URL_RE.findall(command_line):
             purl = urlparse(url)
             # minimal condition to create url object
