@@ -38,6 +38,15 @@ def main() -> None:
         "-G", "--guuid", type=str, help="Search by task guuid (comma split)"
     )
     parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="Dump MISP event to file.",
+    )
+    parser.add_argument(
+        "--no-push", action="store_true", help="Don't push event to the MISP server"
+    )
+    parser.add_argument(
         "KUNAI_JSON_INPUT",
         default="-",
         help="Input file in json line format or stdin with -",
@@ -49,16 +58,18 @@ def main() -> None:
     if args.silent:
         urllib3.disable_warnings()
 
-    if not os.path.isfile(args.config):
+    if not os.path.isfile(args.config) and not args.no_push:
         parser.error(f"no such file or directory: {args.config}")
 
-    config = toml.load(open(args.config, encoding="utf-8"))
+    misp = None
+    if not args.no_push:
+        config = toml.load(open(args.config, encoding="utf-8"))
 
-    misp_config = config["misp"]
+        misp_config = config["misp"]
 
-    misp = PyMISP(
-        url=misp_config["url"], key=misp_config["key"], ssl=misp_config["ssl"]
-    )
+        misp = PyMISP(
+            url=misp_config["url"], key=misp_config["key"], ssl=misp_config["ssl"]
+        )
 
     query = Query(args.no_recurse)
 
@@ -79,7 +90,12 @@ def main() -> None:
     if args.file is not None:
         kunai_analysis_event.with_sample(args.file)
 
-    misp.add_event(kunai_analysis_event.into_misp_event())
+    if misp is not None:
+        misp.add_event(kunai_analysis_event.into_misp_event())
+
+    if args.output:
+        with open(args.output, "w", encoding="utf8") as fd:
+            fd.write(kunai_analysis_event.into_misp_event().to_json())
 
 
 if __name__ == "__main__":
