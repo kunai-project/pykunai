@@ -3,6 +3,7 @@ import gzip
 import tempfile
 import weakref
 import shutil
+import re
 
 from io import BytesIO
 from pymisp import PyMISP, MISPEvent, MISPObject
@@ -10,6 +11,17 @@ from pymisp.tools import FileObject
 from pykunai.event import Event
 from pykunai.graph import KunaiGraph
 from typing import List
+from urllib.parse import urlparse
+
+URL_RE = re.compile(r"\b[^\s]+://[^\s]+")
+
+
+def is_valid_ip_address(ip_str: str) -> bool:
+    try:
+        ipaddress.ip_address(ip_str)
+        return True
+    except ValueError:
+        return False
 
 
 def misp_object_to_tuple(mo: MISPObject):
@@ -204,6 +216,50 @@ class KunaiMispEvent:
                 self._add_relation_with_kunai_guuid(
                     kunai_event.parent_task_guuid, fo.uuid, "execute"
                 )
+
+        # try to find URLs in command line
+        command_line = kunai_event[".data.command_line"]
+        print("parsing command line")
+        for url in URL_RE.findall(command_line):
+            purl = urlparse(url)
+            # minimal condition to create url object
+            if purl.netloc == "":
+                continue
+
+            uo = MISPObject("url")
+            uo.first_seen = kunai_event.utc_time_str
+            # add scheme
+            if purl.scheme != "":
+                uo.add_attribute("scheme", purl.scheme)
+
+            dest = purl.netloc.split(":")[0]
+            if is_valid_ip_address(dest):
+                # add ip
+                uo.add_attribute("ip", purl.netloc.split(":")[0])
+            else:
+                # add domain
+                uo.add_attribute("domain", purl.netloc.split(":")[0])
+            # add port if any
+            if ":" in purl.netloc:
+                uo.add_attribute("port", purl.netloc.split(":")[1])
+            # add path if any
+            if purl.path != "":
+                uo.add_attribute("resource_path", purl.path)
+            # add query string
+            if purl.query != "":
+                uo.add_attribute("query", purl.query)
+
+            # add full url
+            uo.add_attribute("url", url)
+
+            # add a description
+            uo.add_attribute("text", "URL seen in a command line")
+
+            self._add_relation_with_kunai_guuid(
+                kunai_event.task_guuid, uo.uuid, "use_in_cli"
+            )
+
+            misp_event.add_object(uo)
 
     def _handle_clone(self, misp_event: MISPEvent, kunai_event: Event) -> None:
         ptg = kunai_event.parent_task_guuid
