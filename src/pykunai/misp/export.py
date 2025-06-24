@@ -181,9 +181,10 @@ class KunaiMispEvent:
 
         if kunai_event == self._entrypoint:
             # we create the mapping between kunai guuid and misp event
-            self._kunai_to_misp_mapping[kunai_event.task_guuid] = (
-                self._sample_object.uuid
-            )
+            if self._sample_object is not None:
+                self._kunai_to_misp_mapping[kunai_event.task_guuid] = (
+                    self._sample_object.uuid
+                )
             # we don't need to process the entrypoint event as we
             # already have information in the sample file object
             # and we don't want to duplicate it
