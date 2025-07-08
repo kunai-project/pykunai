@@ -46,17 +46,18 @@ def uuids_from_search(search):
 def iocs_from_attributes(source: str, attributes: List[MISPAttribute]) -> List[dict]:
     iocs = []
     for a in attributes:
-        if a.object_relation in TYPES_SEVERITY:
-            iocs.append(
-                {
-                    "type": a.object_relation,
-                    "uuid": a.uuid,
-                    "source": source,
-                    "value": a.value,
-                    "event_uuid": a.event_uuid,
-                    "severity": TYPES_SEVERITY[a.object_relation],
-                }
-            )
+        if hasattr(a, "object_relation"):
+            if a.object_relation in TYPES_SEVERITY:
+                iocs.append(
+                    {
+                        "type": a.object_relation,
+                        "uuid": a.uuid,
+                        "source": source,
+                        "value": a.value,
+                        "event_uuid": a.event_uuid,
+                        "severity": TYPES_SEVERITY[a.object_relation],
+                    }
+                )
 
         if a.type in TYPES_SEVERITY:
             iocs.append(
