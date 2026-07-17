@@ -8,9 +8,9 @@ import re
 from io import BytesIO
 from pymisp import PyMISP, MISPEvent, MISPObject
 from pymisp.tools import FileObject
-from pykunai.event import Event
+from pykunai.event import Event, JqDict
 from pykunai.graph import KunaiGraph
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlparse
 
 URL_RE = re.compile(r"\b[^\s]+://[^\s]+")
@@ -46,7 +46,12 @@ def find_object_by_uuid(misp: MISPEvent, uuid: str):
 
 
 class KunaiMispEvent:
-    def __init__(self, trace: List[Event], misp: PyMISP = None) -> None:
+    def __init__(
+        self,
+        trace: List[Event],
+        misp: Optional[PyMISP] = None,
+        max_objects: Optional[int] = None
+    ) -> None:
         self._sample_path = None
         self._sample_object = None
         self._events = trace
@@ -60,10 +65,26 @@ class KunaiMispEvent:
         # list((src, dst, type))
         self._relations = set()
         self._log_file = tempfile.NamedTemporaryFile(mode="w+", prefix="kunai-to-misp-")
+        # IoC limiting
+        self._max_objects = max_objects
+        self._object_count = 0
+        self._truncated = False
         weakref.finalize(self, self.cleanup)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         self._log_file.close()
+
+    def _can_add_object(self) -> bool:
+        """
+        Check if we can add another MISP object based on the limit.
+        Returns True if we can add, False if we've hit the limit.
+        """
+        if self._max_objects is None:
+            return True
+        if self._object_count >= self._max_objects:
+            self._truncated = True
+            return False
+        return True
 
     def _cache(self, key: str, o: object) -> bool:
         """
@@ -122,6 +143,7 @@ class KunaiMispEvent:
             comment="kunai logs for sample",
         )
 
+        # Always add sample object
         misp_event.add_object(self._sample_object)
 
     def _update_with_event(self, misp_event: MISPEvent, kunai_event: Event) -> None:
@@ -209,7 +231,9 @@ class KunaiMispEvent:
 
                 # if object hasn't aleady been added we add it
                 if not self._cache_misp_object("execve", fo):
-                    misp_event.add_object(fo)
+                    if self._can_add_object():
+                        misp_event.add_object(fo)
+                        self._object_count += 1
 
                 # we create the mapping between kunai guuid and misp event
                 self._kunai_to_misp_mapping[kunai_event.task_guuid] = fo.uuid
@@ -259,7 +283,9 @@ class KunaiMispEvent:
                 kunai_event.task_guuid, uo.uuid, "use_in_cli"
             )
 
-            misp_event.add_object(uo)
+            if self._can_add_object():
+                misp_event.add_object(uo)
+                self._object_count += 1
 
     def _handle_clone(self, misp_event: MISPEvent, kunai_event: Event) -> None:
         ptg = kunai_event.parent_task_guuid
@@ -295,7 +321,9 @@ class KunaiMispEvent:
 
             self._add_relation_with_kunai_guuid(kunai_event.task_guuid, fo.uuid, "load")
 
-            misp_event.add_object(fo)
+            if self._can_add_object():
+                misp_event.add_object(fo)
+                self._object_count += 1
 
     def _handle_network(self, misp_event: MISPEvent, kunai_event: Event) -> None:
         # we take only connection to public ips
@@ -330,7 +358,9 @@ class KunaiMispEvent:
             kunai_event.task_guuid, so.uuid, kunai_event.type_str
         )
 
-        misp_event.add_object(so)
+        if self._can_add_object():
+            misp_event.add_object(so)
+            self._object_count += 1
 
     def _handle_dns_query(self, misp_event: MISPEvent, kunai_event: Event) -> None:
         for ip in kunai_event[".data.response"].split(";"):
@@ -344,7 +374,9 @@ class KunaiMispEvent:
             o.add_attribute("last-seen", kunai_event[".info.utc_time"])
             if self._cache_misp_object("dns_query", o):
                 continue
-            misp_event.add_object(o)
+            if self._can_add_object():
+                misp_event.add_object(o)
+                self._object_count += 1
 
             # create misp object relationship
             self._add_relation_with_kunai_guuid(kunai_event.task_guuid, o.uuid, "query")
@@ -374,7 +406,9 @@ class KunaiMispEvent:
         # create misp object relationship
         self._add_relation_with_kunai_guuid(kunai_event.task_guuid, fo.uuid, ty)
 
-        misp_event.add_object(fo)
+        if self._can_add_object():
+            misp_event.add_object(fo)
+            self._object_count += 1
 
     def _search_mitre_tags(self) -> set:
         tags = set()
@@ -401,7 +435,8 @@ class KunaiMispEvent:
         graph = KunaiGraph()
 
         for e in self._events:
-            self._update_with_event(misp_event, e)
+            if self._can_add_object():
+                self._update_with_event(misp_event, e)
             graph.update(e.jq_dict())
 
         self._finalize(misp_event, graph)
@@ -409,6 +444,10 @@ class KunaiMispEvent:
         # we add mitre attack tags
         for tag in self._search_mitre_tags():
             misp_event.add_tag(tag)
+
+        # Add partial-export tag if we hit the IoC limit
+        if self._truncated:
+            misp_event.add_tag("partial-export")
 
         self._create_relations(misp_event)
 

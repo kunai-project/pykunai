@@ -51,6 +51,13 @@ def main() -> None:
         default="-",
         help="Input file in json line format or stdin with -",
     )
+    parser.add_argument(
+        "--max-objects",
+        type=int,
+        default=None,
+        help="Maximum number of objects to include in the MISP event. "
+        "If not specified, all MISP objects are included. "
+    )
 
     args = parser.parse_args()
 
@@ -85,7 +92,7 @@ def main() -> None:
 
     trace = [e for e in decode_events(args.KUNAI_JSON_INPUT) if query.match(e)]
 
-    kunai_analysis_event = KunaiMispEvent(trace, misp)
+    kunai_analysis_event = KunaiMispEvent(trace, misp, max_objects=args.max_objects)
 
     if args.file is not None:
         kunai_analysis_event.with_sample(args.file)
