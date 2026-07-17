@@ -10,8 +10,8 @@ class JqDict:
     def has_key(self, key: str) -> bool:
         return key in self._dict
 
-    def __getitem__(self, key: str) -> object:
-        def __get_rec(d: dict, path: list) -> JqDict:
+    def __getitem__(self, key: str) -> "object | JqDict | None":
+        def __get_rec(d: dict, path: list) -> "object | JqDict | None":
             if len(path) == 1:
                 k = path.pop(0)
                 o = d[k]
@@ -31,7 +31,9 @@ class JqDict:
         return self._dict.__str__()
 
     def __eq__(self, other: object) -> bool:
-        return self._dict == other._dict
+        if isinstance(other, JqDict):
+            return self._dict == other._dict
+        return False
 
     def __hash__(self) -> int:
         return hash(json.dumps(self._dict))
@@ -44,7 +46,7 @@ class Event:
     def __init__(self, event: JqDict) -> None:
         self.event = event
 
-    def __getitem__(self, key: str) -> object:
+    def __getitem__(self, key: str) -> object | JqDict | None:
         return self.event[key]
 
     def __contains__(self, key: str) -> bool:
@@ -55,33 +57,33 @@ class Event:
 
     @property
     def type_str(self) -> str:
-        return self.event[".info.event.name"]
+        return self.event[".info.event.name"]  # ty:ignore[invalid-return-type]
 
     @property
     def data(self) -> JqDict:
-        return self.event[".data"]
+        return self.event[".data"]  # ty:ignore[invalid-return-type]
 
     @property
     def info(self) -> JqDict:
-        return self.event[".info"]
+        return self.event[".info"]  # ty:ignore[invalid-return-type]
 
     @property
     def attack(self) -> set:
         if ".detection.attack" in self:
-            return set(self[".detection.attack"])
+            return set(self[".detection.attack"])  # ty:ignore[invalid-argument-type]
         return set()
 
     @property
     def utc_time_str(self) -> str:
-        return self[".info.utc_time"]
+        return self[".info.utc_time"]  # ty:ignore[invalid-return-type]
 
     @property
     def task_guuid(self) -> str:
-        return self[".info.task.guuid"]
+        return self[".info.task.guuid"]  # ty:ignore[invalid-return-type]
 
     @property
     def parent_task_guuid(self) -> str:
-        return self[".info.parent_task.guuid"]
+        return self[".info.parent_task.guuid"]  # ty:ignore[invalid-return-type]
 
     def json(self) -> str:
         return self.event.json()
@@ -146,8 +148,8 @@ class Query(object):
         """
         if self.recurse:
             if "info" in event:
-                if "task" in event["info"]:
-                    guid = event["info.task.guuid"]
+                if "task" in event["info"]:  # ty:ignore[unsupported-operator]
+                    guid: str = event["info.task.guuid"]  # ty:ignore[invalid-assignment]
                     self.add_guids([guid])
 
     def _match_regex(self, s: object) -> bool:
@@ -186,13 +188,13 @@ class Query(object):
 
     def match(self, event: Event) -> bool:
         if "info" in event and "data" in event:
-            task_info = event[".info.task"]
-            ptask_info = event["info.parent_task"]
+            task_info: JqDict = event[".info.task"]  # ty:ignore[invalid-assignment]
+            ptask_info: JqDict = event["info.parent_task"]  # ty:ignore[invalid-assignment]
 
             # check for event id
-            if "event" in event["info"]:
-                if "id" in event["info.event"]:
-                    eid = int(event["info.event.id"])
+            if "event" in event["info"]:  # ty:ignore[unsupported-operator]
+                if "id" in event["info.event"]:  # ty:ignore[unsupported-operator]
+                    eid = int(event["info.event.id"])  # ty:ignore[invalid-argument-type]
                     if self._filtered_out(eid):
                         return False
                     if self._filtered_in(eid):

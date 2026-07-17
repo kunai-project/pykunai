@@ -1,17 +1,18 @@
-import ipaddress
 import gzip
+import ipaddress
+import re
+import shutil
 import tempfile
 import weakref
-import shutil
-import re
-
 from io import BytesIO
-from pymisp import PyMISP, MISPEvent, MISPObject
-from pymisp.tools import FileObject
-from pykunai.event import Event, JqDict
-from pykunai.graph import KunaiGraph
 from typing import List, Optional
 from urllib.parse import urlparse
+
+from pymisp import MISPEvent, MISPObject, PyMISP
+from pymisp.tools import FileObject
+
+from pykunai.event import Event, JqDict
+from pykunai.graph import KunaiGraph
 
 URL_RE = re.compile(r"\b[^\s]+://[^\s]+")
 
@@ -116,12 +117,12 @@ class KunaiMispEvent:
         self._sample_object = FileObject(filepath=self._sample_path)
         self._sample_object.comment = "Malware Sample Analyzed"
 
-    def _finalize(self, misp_event: MISPEvent, graph: None) -> None:
-        if self._sample_path is None:
+    def _finalize(self, misp_event: MISPEvent, graph: KunaiGraph | None) -> None:
+        if self._sample_object is None:
             return None
 
         if self._entrypoint is not None:
-            self._sample_object.first_seen = self._entrypoint.utc_time_str
+            self._sample_object.first_seen = self._entrypoint.utc_time_str  # ty:ignore[invalid-assignment]
 
         # we add the activity graph if necessary
         if graph is not None:
@@ -195,11 +196,11 @@ class KunaiMispEvent:
                 o.add_reference(dst, ty)
 
     def _handle_execve(self, misp_event: MISPEvent, kunai_event: Event) -> None:
-        exes = [kunai_event[".data.exe"]]
+        exes: list[JqDict] = [kunai_event[".data.exe"]]  # ty:ignore[invalid-assignment]
 
         # we add interpreter if we are an execve_script
         if kunai_event.type_str == "execve_script":
-            exes.append(kunai_event[".data.interpreter"])
+            exes.append(kunai_event[".data.interpreter"])  # ty:ignore[invalid-argument-type]
 
         if kunai_event == self._entrypoint:
             # we create the mapping between kunai guuid and misp event
@@ -218,16 +219,16 @@ class KunaiMispEvent:
             if exe["path"] in self._dropped or kunai_event == self._entrypoint:
                 fo = MISPObject("file")
                 fo.comment = kunai_event.type_str
-                fo.first_seen = kunai_event.utc_time_str
+                fo.first_seen = kunai_event.utc_time_str  # ty:ignore[invalid-assignment]
                 # we add attributes
-                fo.add_attribute("path", exe["path"])
+                fo.add_attribute("path", exe["path"])  # ty:ignore[invalid-argument-type]
                 if exe["md5"] != "":
-                    fo.add_attribute("md5", exe["md5"])
-                    fo.add_attribute("sha1", exe["sha1"])
-                    fo.add_attribute("sha256", exe["sha256"])
-                    fo.add_attribute("sha512", exe["sha512"])
-                if exe["size"] > 0:
-                    fo.add_attribute("size-in-bytes", exe["size"])
+                    fo.add_attribute("md5", exe["md5"])  # ty:ignore[invalid-argument-type]
+                    fo.add_attribute("sha1", exe["sha1"])  # ty:ignore[invalid-argument-type]
+                    fo.add_attribute("sha256", exe["sha256"])  # ty:ignore[invalid-argument-type]
+                    fo.add_attribute("sha512", exe["sha512"])  # ty:ignore[invalid-argument-type]
+                if exe["size"] > 0:  # ty:ignore[unsupported-operator]
+                    fo.add_attribute("size-in-bytes", exe["size"])  # ty:ignore[invalid-argument-type]
 
                 # if object hasn't aleady been added we add it
                 if not self._cache_misp_object("execve", fo):
@@ -243,7 +244,7 @@ class KunaiMispEvent:
                 )
 
         # try to find URLs in command line
-        command_line = kunai_event[".data.command_line"]
+        command_line: str = kunai_event[".data.command_line"]  # ty:ignore[invalid-assignment]
         for url in URL_RE.findall(command_line):
             purl = urlparse(url)
             # minimal condition to create url object
@@ -251,7 +252,7 @@ class KunaiMispEvent:
                 continue
 
             uo = MISPObject("url")
-            uo.first_seen = kunai_event.utc_time_str
+            uo.first_seen = kunai_event.utc_time_str  # ty:ignore[invalid-assignment]
             # add scheme
             if purl.scheme != "":
                 uo.add_attribute("scheme", purl.scheme)
@@ -301,19 +302,19 @@ class KunaiMispEvent:
         exe = kunai_event[".data.mapped"]
 
         # if exe has been dropped
-        if exe["path"] in self._dropped:
+        if exe["path"] in self._dropped:  # ty:ignore[not-subscriptable]
             fo = MISPObject("file")
             fo.comment = kunai_event.type_str
-            fo.first_seen = kunai_event.utc_time_str
+            fo.first_seen = kunai_event.utc_time_str  # ty:ignore[invalid-assignment]
             # we add attributes
-            fo.add_attribute("path", exe["path"])
-            if exe["md5"] != "":
-                fo.add_attribute("md5", exe["md5"])
-                fo.add_attribute("sha1", exe["sha1"])
-                fo.add_attribute("sha256", exe["sha256"])
-                fo.add_attribute("sha512", exe["sha512"])
-            if exe["size"] > 0:
-                fo.add_attribute("size-in-bytes", exe["size"])
+            fo.add_attribute("path", exe["path"])  # ty:ignore[not-subscriptable]
+            if exe["md5"] != "":  # ty:ignore[not-subscriptable]
+                fo.add_attribute("md5", exe["md5"])  # ty:ignore[not-subscriptable]
+                fo.add_attribute("sha1", exe["sha1"])  # ty:ignore[not-subscriptable]
+                fo.add_attribute("sha256", exe["sha256"])  # ty:ignore[not-subscriptable]
+                fo.add_attribute("sha512", exe["sha512"])  # ty:ignore[not-subscriptable]
+            if exe["size"] > 0:  # ty:ignore[not-subscriptable]
+                fo.add_attribute("size-in-bytes", exe["size"])  # ty:ignore[not-subscriptable]
 
             # if object was cached we return
             if self._cache_misp_object("mmap_exec", fo):
@@ -331,24 +332,24 @@ class KunaiMispEvent:
             return None
 
         so = MISPObject("network-socket")
-        so.first_seen = kunai_event.utc_time_str
+        so.first_seen = kunai_event.utc_time_str  # ty:ignore[invalid-assignment]
 
         so.comment = kunai_event.type_str
-        so.add_attribute("address-family", kunai_event[".data.socket.domain"])
-        so.add_attribute("protocol", kunai_event[".data.socket.proto"])
+        so.add_attribute("address-family", kunai_event[".data.socket.domain"])  # ty:ignore[invalid-argument-type]
+        so.add_attribute("protocol", kunai_event[".data.socket.proto"])  # ty:ignore[invalid-argument-type]
 
         # we add only hostname we could resolve
         hostname = kunai_event[".data.dst.hostname"]
         if hostname != "?":
-            so.add_attribute("hostname-dst", hostname)
+            so.add_attribute("hostname-dst", hostname)  # ty:ignore[invalid-argument-type]
 
         dst = kunai_event[".data.dst.ip"]
         # we don't process non globally reachable IP address
-        if not ipaddress.ip_address(dst).is_global:
+        if not ipaddress.ip_address(dst).is_global:  # ty:ignore[invalid-argument-type]
             return
 
-        so.add_attribute("ip-dst", kunai_event[".data.dst.ip"])
-        so.add_attribute("dst-port", kunai_event[".data.dst.port"])
+        so.add_attribute("ip-dst", kunai_event[".data.dst.ip"])  # ty:ignore[invalid-argument-type]
+        so.add_attribute("dst-port", kunai_event[".data.dst.port"])  # ty:ignore[invalid-argument-type]
 
         if self._cache_misp_object("connect", so):
             return
@@ -363,15 +364,15 @@ class KunaiMispEvent:
             self._object_count += 1
 
     def _handle_dns_query(self, misp_event: MISPEvent, kunai_event: Event) -> None:
-        for ip in kunai_event[".data.response"].split(";"):
+        for ip in kunai_event[".data.response"].split(";"):  # ty:ignore[unresolved-attribute]
             o = MISPObject("domain-ip")
-            o.first_seen = kunai_event.utc_time_str
+            o.first_seen = kunai_event.utc_time_str  # ty:ignore[invalid-assignment]
 
             o.comment = kunai_event.type_str
 
-            o.add_attribute("domain", kunai_event[".data.query"])
+            o.add_attribute("domain", kunai_event[".data.query"])  # ty:ignore[invalid-argument-type]
             o.add_attribute("ip", ip)
-            o.add_attribute("last-seen", kunai_event[".info.utc_time"])
+            o.add_attribute("last-seen", kunai_event[".info.utc_time"])  # ty:ignore[invalid-argument-type]
             if self._cache_misp_object("dns_query", o):
                 continue
             if self._can_add_object():
@@ -390,11 +391,11 @@ class KunaiMispEvent:
         ty.replace("write_close", "write")
         ty.replace("write_config", "write")
 
-        fo.first_seen = kunai_event.utc_time_str
+        fo.first_seen = kunai_event.utc_time_str  # ty:ignore[invalid-assignment]
 
         fo.comment = ty
         path = kunai_event[".data.path"]
-        fo.add_attribute("path", kunai_event[".data.path"])
+        fo.add_attribute("path", kunai_event[".data.path"])  # ty:ignore[invalid-argument-type]
 
         # we flag the file as being dropped
         if ty == "write":
@@ -423,8 +424,8 @@ class KunaiMispEvent:
                 searchall=a,
             ):
                 # we found the attack id
-                if gc["GalaxyCluster"]["value"].endswith(a):
-                    tags.add(gc["GalaxyCluster"]["tag_name"])
+                if gc["GalaxyCluster"]["value"].endswith(a):  # ty:ignore[invalid-argument-type]
+                    tags.add(gc["GalaxyCluster"]["tag_name"])  # ty:ignore[invalid-argument-type]
                     break
         return tags
 
