@@ -1,3 +1,4 @@
+from pathlib import Path
 import gzip
 import ipaddress
 import re
@@ -25,14 +26,14 @@ def is_valid_ip_address(ip_str: str) -> bool:
         return False
 
 
-def misp_object_to_tuple(mo: MISPObject):
+def misp_object_to_tuple(mo: MISPObject) -> tuple:
     out = []
     for a in mo.attributes:
         out.append((a.object_relation, a.value))
     return tuple(out)
 
 
-def compress_file(input_file):
+def compress_file(input_file: Path | str) -> bytes:
     with open(input_file, "rb") as f_in:
         with tempfile.NamedTemporaryFile() as tmp:
             with gzip.open(tmp.name, "wb") as f_out:
@@ -40,7 +41,7 @@ def compress_file(input_file):
             return tmp.read()
 
 
-def find_object_by_uuid(misp: MISPEvent, uuid: str):
+def find_object_by_uuid(misp: MISPEvent, uuid: str) -> MISPObject | None:
     for o in misp.objects:
         if o.uuid == uuid:
             return o
