@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.7"
 resolution-markers = [
     "python_full_version >= '3.9'",
@@ -12,7 +12,7 @@ name = "attrs"
 version = "24.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "importlib-metadata", marker = "python_full_version < '3.8'" },
+    { name = "importlib-metadata" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fc/0f/aafca9af9315aee06a89ffde799a10a582fe8de76c563ee80bbcdc08b3fb/attrs-24.2.0.tar.gz", hash = "sha256:5cfb1b9148b5b086569baec03f20d7b6bf3bcacc9a42bebf87ffaaca362f6346", size = 792678, upload-time = "2024-08-06T14:37:38.364Z" }
 wheels = [
@@ -179,8 +179,8 @@ name = "importlib-metadata"
 version = "6.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.8'" },
-    { name = "zipp", marker = "python_full_version < '3.8'" },
+    { name = "typing-extensions" },
+    { name = "zipp" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a3/82/f6e29c8d5c098b6be61460371c2c5591f4a335923639edec43b3830650a4/importlib_metadata-6.7.0.tar.gz", hash = "sha256:1aaf550d4f73e5d6783e7acb77aec43d49da8017410afae93822cc9cca98c4d4", size = 53569, upload-time = "2023-06-18T21:44:35.024Z" }
 wheels = [
@@ -192,7 +192,7 @@ name = "importlib-resources"
 version = "5.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp", marker = "python_full_version < '3.8'" },
+    { name = "zipp" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4e/a2/3cab1de83f95dd15297c15bdc04d50902391d707247cada1f021bbfe2149/importlib_resources-5.12.0.tar.gz", hash = "sha256:4be82589bf5c1d7999aedf2a45159d10cb3ca4f19b2271f8792bc8e6da7b22f6", size = 39894, upload-time = "2023-02-17T22:32:21.013Z" }
 wheels = [
@@ -204,12 +204,12 @@ name = "jsonschema"
 version = "4.17.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs", marker = "python_full_version < '3.8'" },
-    { name = "importlib-metadata", marker = "python_full_version < '3.8'" },
-    { name = "importlib-resources", marker = "python_full_version < '3.8'" },
-    { name = "pkgutil-resolve-name", marker = "python_full_version < '3.8'" },
-    { name = "pyrsistent", marker = "python_full_version < '3.8'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.8'" },
+    { name = "attrs" },
+    { name = "importlib-metadata" },
+    { name = "importlib-resources" },
+    { name = "pkgutil-resolve-name" },
+    { name = "pyrsistent" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/36/3d/ca032d5ac064dff543aa13c984737795ac81abc9fb130cd2fcff17cfabc7/jsonschema-4.17.3.tar.gz", hash = "sha256:0f864437ab8b6076ba6707453ef8f98a6a0d512a80e93f8abdb676f737ecb60d", size = 297785, upload-time = "2022-11-29T20:37:47.453Z" }
 wheels = [
@@ -252,7 +252,7 @@ wheels = [
 
 [[package]]
 name = "pykunai"
-version = "0.1.10"
+version = "0.1.11"
 source = { editable = "." }
 dependencies = [
     { name = "graphviz", version = "0.20.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
@@ -278,11 +278,11 @@ resolution-markers = [
     "python_full_version < '3.8'",
 ]
 dependencies = [
-    { name = "deprecated", marker = "python_full_version < '3.8'" },
-    { name = "jsonschema", marker = "python_full_version < '3.8'" },
-    { name = "publicsuffixlist", version = "0.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
-    { name = "python-dateutil", marker = "python_full_version < '3.8'" },
-    { name = "requests", version = "2.31.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "deprecated" },
+    { name = "jsonschema" },
+    { name = "publicsuffixlist", version = "0.9.4", source = { registry = "https://pypi.org/simple" } },
+    { name = "python-dateutil" },
+    { name = "requests", version = "2.31.0", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/26/5a/e91b7361f93a807a0432d8b2a7fcf9be0a1c38fc4e6e9e9cbdc3cf1b141a/pymisp-2.4.167.tar.gz", hash = "sha256:0f2c985f4d9b4ae158943cd53f2c448e19245ee265aa5dd6d931b92939ac94fc", size = 373697, upload-time = "2022-12-22T12:54:19.855Z" }
 wheels = [
@@ -297,10 +297,10 @@ resolution-markers = [
     "python_full_version == '3.8.*'",
 ]
 dependencies = [
-    { name = "deprecated", marker = "python_full_version == '3.8.*'" },
-    { name = "publicsuffixlist", version = "1.0.2.20250202", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "python-dateutil", marker = "python_full_version == '3.8.*'" },
-    { name = "requests", version = "2.32.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
+    { name = "deprecated" },
+    { name = "publicsuffixlist", version = "1.0.2.20250202", source = { registry = "https://pypi.org/simple" } },
+    { name = "python-dateutil" },
+    { name = "requests", version = "2.32.3", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fb/80/b3b23f496c8a635db4f585ec4e5ff35e4a7671719fc44d9bb4ec2d4aa4bb/pymisp-2.5.1.tar.gz", hash = "sha256:8aa3aa9e8ad9d9eb7a31e8ad5c07741855d4bac6efa65d83ea6a62689efae2c2", size = 2083152, upload-time = "2024-10-17T12:48:07.865Z" }
 wheels = [
@@ -315,10 +315,10 @@ resolution-markers = [
     "python_full_version >= '3.9'",
 ]
 dependencies = [
-    { name = "deprecated", marker = "python_full_version >= '3.9'" },
-    { name = "publicsuffixlist", version = "1.0.2.20250202", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
-    { name = "python-dateutil", marker = "python_full_version >= '3.9'" },
-    { name = "requests", version = "2.32.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "deprecated" },
+    { name = "publicsuffixlist", version = "1.0.2.20250202", source = { registry = "https://pypi.org/simple" } },
+    { name = "python-dateutil" },
+    { name = "requests", version = "2.32.3", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/49/77/99ec93be06e8fab687af786ae48870c577d090326ee30f254218562586b6/pymisp-2.5.4.tar.gz", hash = "sha256:368fef2152d9d276d8b476b0f1c72376e9ead49bf58631e31bdb5d7ed86d603f", size = 2078807, upload-time = "2024-12-20T15:39:28.131Z" }
 wheels = [
@@ -379,10 +379,10 @@ resolution-markers = [
     "python_full_version < '3.8'",
 ]
 dependencies = [
-    { name = "certifi", marker = "python_full_version < '3.8'" },
-    { name = "charset-normalizer", marker = "python_full_version < '3.8'" },
-    { name = "idna", marker = "python_full_version < '3.8'" },
-    { name = "urllib3", version = "2.0.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "certifi" },
+    { name = "charset-normalizer" },
+    { name = "idna" },
+    { name = "urllib3", version = "2.0.7", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9d/be/10918a2eac4ae9f02f6cfe6414b7a155ccd8f7f9d4380d62fd5b955065c3/requests-2.31.0.tar.gz", hash = "sha256:942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1", size = 110794, upload-time = "2023-05-22T15:12:44.175Z" }
 wheels = [
@@ -398,10 +398,10 @@ resolution-markers = [
     "python_full_version == '3.8.*'",
 ]
 dependencies = [
-    { name = "certifi", marker = "python_full_version >= '3.8'" },
-    { name = "charset-normalizer", marker = "python_full_version >= '3.8'" },
-    { name = "idna", marker = "python_full_version >= '3.8'" },
-    { name = "urllib3", version = "2.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
+    { name = "certifi" },
+    { name = "charset-normalizer" },
+    { name = "idna" },
+    { name = "urllib3", version = "2.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "urllib3", version = "2.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/63/70/2bf7780ad2d390a8d301ad0b550f1581eadbd9a20f896afe06353c2a2913/requests-2.32.3.tar.gz", hash = "sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760", size = 131218, upload-time = "2024-05-29T15:37:49.536Z" }
