@@ -1,8 +1,5 @@
+import itertools
 import os
-import shutil
-import argparse
-import sys
-import json
 import graphviz
 import tempfile
 import uuid
@@ -10,12 +7,12 @@ import uuid
 from pykunai.event import JqDict
 
 
-def check_flag(value, flag) -> bool:
+def check_flag(value: int, flag: int) -> bool:
     return value & flag == flag
 
 
 class Color:
-    def __init__(self, font, bg):
+    def __init__(self, font: str, bg: str) -> None:
         self.font = font
         self.bg = bg
 
@@ -218,12 +215,11 @@ class KunaiGraph:
         self.finalize()
 
     def update(self, jq_dict: JqDict):
-        data = jq_dict["data"]
+        jq_dict["data"]
         info = jq_dict["info"]
-        event_type = info["event.name"]
-        task = info["task"]
-        guuid = task["guuid"]
-        parent_task = info["parent_task"]
+        event_type = info["event.name"]  # ty:ignore[not-subscriptable]
+        task = info["task"]  # ty:ignore[not-subscriptable]
+        parent_task = info["parent_task"]  # ty:ignore[not-subscriptable]
         pguid = parent_task["guuid"]
 
         is_zombie = task["zombie"] if task.has_key("zombie") else False
@@ -279,7 +275,6 @@ class KunaiGraph:
         for task in self._tasks.values():
             task_node = task.root
             node_color = task.color()
-            task_guid = task_node[".info.task.guuid"]
 
             if task_node.kind() in ["execve", "execve_script"]:
                 label = (
@@ -343,51 +338,15 @@ class KunaiGraph:
                 )
 
             marked_con = set()
-            for con in task.connect:
-                dst_ip = con[".data.dst.ip"]
-                host = con[".data.dst.hostname"]
-                dst_port = con[".data.dst.port"]
 
-                dst_node = (
-                    f"{host}:{dst_port}" if host != "?" else f"{dst_ip}:{dst_port}"
-                )
-
-                if dst_node in marked_con:
-                    continue
-
-                node_name = "{}".format(uuid.uuid5(uuid.NAMESPACE_OID, dst_node))
-                dot.node(
-                    node_name,
-                    label=dst_node,
-                    fillcolor=NET_NODE_COLOR.bg,
-                    fontcolor=NET_NODE_COLOR.font,
-                )
-
-                label = "con"
-                color = color_from_bool(con[".data.connected"])
-                if task.has_sent_data(dst_ip, dst_port):
-                    byte_sent = task.data_sent(dst_ip, dst_port)
-                    label = f"send: {byte_sent}B"
-                    color = "blue"
-
-                dot.edge(
-                    task_node.task_uuid,
-                    node_name,
-                    label=label,
-                    style="dashed",
-                    color=color,
-                    fontcolor=color,
-                )
-                marked_con.add(dst_node)
-
-            unique_ips = set(map(lambda sd: sd[".data.dst.ip"], task.send_data))
+            unique_ips = set(map(lambda sd: sd[".data.dst.ip"], itertools.chain(task.connect, task.send_data)))
 
             if len(unique_ips) > 30:
-                name = f"{task_node.task_uuid}|send-data"
+                name = f"{task_node.task_uuid}|network"
                 # box shape is needed there to do new line
                 dot.node(
                     name,
-                    f"send-data to {len(unique_ips)} IP addresses\nreview logs to see them all",
+                    f"network activity to {len(unique_ips)} IP addresses\nreview logs to see them all",
                     fillcolor=NET_NODE_COLOR.bg,
                     fontcolor=NET_NODE_COLOR.font,
                     shape="box",
@@ -395,12 +354,52 @@ class KunaiGraph:
                 dot.edge(
                     task_node.task_uuid,
                     name,
-                    label="send",
+                    label="network",
                     style="dashed",
-                    color="blue",
-                    fontcolor="blue",
+                    color="purple",
+                    fontcolor="purple",
                 )
+
             else:
+
+                # handle connect
+                for con in task.connect:
+                    dst_ip = con[".data.dst.ip"]
+                    host = con[".data.dst.hostname"]
+                    dst_port = con[".data.dst.port"]
+
+                    dst_node = (
+                        f"{host}:{dst_port}" if host != "?" else f"{dst_ip}:{dst_port}"
+                    )
+
+                    if dst_node in marked_con:
+                        continue
+
+                    node_name = "{}".format(uuid.uuid5(uuid.NAMESPACE_OID, dst_node))
+                    dot.node(
+                        node_name,
+                        label=dst_node,
+                        fillcolor=NET_NODE_COLOR.bg,
+                        fontcolor=NET_NODE_COLOR.font,
+                    )
+
+                    label = "con"
+                    color = color_from_bool(con[".data.connected"])
+                    if task.has_sent_data(dst_ip, dst_port):
+                        byte_sent = task.data_sent(dst_ip, dst_port)
+                        label = f"send: {byte_sent}B"
+                        color = "blue"
+
+                    dot.edge(
+                        task_node.task_uuid,
+                        node_name,
+                        label=label,
+                        style="dashed",
+                        color=color,
+                        fontcolor=color,
+                    )
+                    marked_con.add(dst_node)
+
                 for send in task.send_data:
                     dst_ip = send[".data.dst.ip"]
                     dst_port = send[".data.dst.port"]
