@@ -6,7 +6,7 @@ import uuid
 
 from collections.abc import Iterable, Iterator
 
-from pykunai.event import JqDict
+from pykunai.event import JqDict, Event
 
 
 def check_flag(value: int, flag: int) -> bool:
@@ -33,7 +33,7 @@ def color_from_bool(b: bool) -> str:
     return FAIL_COLOR
 
 
-class Event:
+class GraphEvent(Event):
     def __init__(self, event: JqDict) -> None:
         self._jq_dict = event
 
@@ -66,27 +66,27 @@ class Event:
 class Task:
     MAX_NODE_KIND_COUNT = 4096
 
-    def __init__(self, root: Event) -> None:
+    def __init__(self, root: GraphEvent) -> None:
         self.root = root
-        self.nodes: list[Event] = []
+        self.nodes: list[GraphEvent] = []
         self.attributes: set[str] = set()
         self.capa: set[str] = set()
         self._limits: dict[str, int] = {}
 
-    def add(self, node: Event) -> None:
+    def add(self, node: GraphEvent) -> None:
         # we append only if we didn't reach the maximum
         # number of events of this kind
         if not self.reached_node_limit(node):
             self.nodes.append(node)
             self._update_limits(node)
 
-    def _update_limits(self, node: Event) -> None:
+    def _update_limits(self, node: GraphEvent) -> None:
         if node.kind() not in self._limits:
             self._limits[node.kind()] = 1
         else:
             self._limits[node.kind()] += 1
 
-    def reached_node_limit(self, node: Event) -> bool:
+    def reached_node_limit(self, node: GraphEvent) -> bool:
         if node.kind() not in self._limits:
             return False
         return self._limits[node.kind()] > self.MAX_NODE_KIND_COUNT
@@ -119,7 +119,7 @@ class Task:
         return "{{ {} }} | {{{}}} ".format(file, attrs)
 
     def capabilities(self) -> None:
-        def has_item(f: Iterator[Event]) -> bool:
+        def has_item(f: Iterator[GraphEvent]) -> bool:
             try:
                 f.__next__()
                 return True
@@ -158,15 +158,15 @@ class Task:
             return Color("black", red)
         return DEFAULT_NODE_COLOR
 
-    def filter_nodes(self, kind: str) -> Iterator[Event]:
+    def filter_nodes(self, kind: str) -> Iterator[GraphEvent]:
         return filter(lambda n: n.kind() == kind, self.nodes)
 
     @property
-    def connect(self) -> Iterator[Event]:
+    def connect(self) -> Iterator[GraphEvent]:
         return self.filter_nodes("connect")
 
     @property
-    def send_data(self) -> Iterator[Event]:
+    def send_data(self) -> Iterator[GraphEvent]:
         return self.filter_nodes("send_data")
 
     def data_sent(self, dst_ip: str, dst_port: int) -> int:
@@ -209,6 +209,11 @@ class KunaiGraph:
             self.update(jq_dict)
         self.finalize()
 
+    def from_event_iterator(self, iterator: Iterable[Event]) -> None:
+        for event in iterator:
+            self.update(event.jq_dict())
+        self.finalize()
+
     def update(self, jq_dict: JqDict) -> None:
         jq_dict["data"]
         info = jq_dict["info"]
@@ -219,7 +224,7 @@ class KunaiGraph:
 
         is_zombie = task["zombie"] if task.has_key("zombie") else False
 
-        evt = Event(jq_dict)
+        evt = GraphEvent(jq_dict)
         if event_type in ["execve", "execve_script"]:
             if evt.task_uuid not in self._tasks:
                 self._tasks[evt.task_uuid] = Task(evt)
