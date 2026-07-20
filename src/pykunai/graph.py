@@ -4,6 +4,8 @@ import graphviz
 import tempfile
 import uuid
 
+from collections.abc import Iterable, Iterator
+
 from pykunai.event import JqDict
 
 
@@ -25,36 +27,36 @@ SUCCESS_COLOR = "green"
 FAIL_COLOR = "red"
 
 
-def color_from_bool(b: bool):
+def color_from_bool(b: bool) -> str:
     if b:
         return SUCCESS_COLOR
     return FAIL_COLOR
 
 
 class Event:
-    def __init__(self, event: JqDict):
+    def __init__(self, event: JqDict) -> None:
         self._jq_dict = event
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> object | JqDict | None:
         return self._jq_dict[key]
 
-    def kind(self):
-        return self._jq_dict[".info.event.name"]
+    def kind(self) -> str:
+        return self._jq_dict[".info.event.name"]  # ty:ignore[invalid-return-type]
 
     @property
-    def task_uuid(self):
+    def task_uuid(self) -> str:
         return "guuid={} pid={}".format(
             self._jq_dict[".info.task.guuid"], self._jq_dict[".info.task.pid"]
         )
 
     @property
-    def task_uuid_tgid(self):
+    def task_uuid_tgid(self) -> str:
         return "guuid={} pid={}".format(
             self._jq_dict[".info.task.guuid"], self._jq_dict[".info.task.tgid"]
         )
 
     @property
-    def parent_task_uuid(self):
+    def parent_task_uuid(self) -> str:
         return "guuid={} pid={}".format(
             self._jq_dict[".info.parent_task.guuid"],
             self._jq_dict[".info.parent_task.pid"],
@@ -64,22 +66,21 @@ class Event:
 class Task:
     MAX_NODE_KIND_COUNT = 4096
 
-    def __init__(self, root: Event):
+    def __init__(self, root: Event) -> None:
         self.root = root
-        self.nodes = []
-        self.clones = []
-        self.attributes = set()
-        self.capa = set()
-        self._limits = {}
+        self.nodes: list[Event] = []
+        self.attributes: set[str] = set()
+        self.capa: set[str] = set()
+        self._limits: dict[str, int] = {}
 
-    def add(self, node: Event):
+    def add(self, node: Event) -> None:
         # we append only if we didn't reach the maximum
         # number of events of this kind
         if not self.reached_node_limit(node):
             self.nodes.append(node)
             self._update_limits(node)
 
-    def _update_limits(self, node: Event):
+    def _update_limits(self, node: Event) -> None:
         if node.kind() not in self._limits:
             self._limits[node.kind()] = 1
         else:
@@ -90,14 +91,14 @@ class Task:
             return False
         return self._limits[node.kind()] > self.MAX_NODE_KIND_COUNT
 
-    def set_attr(self, *attrs):
+    def set_attr(self, *attrs: str) -> None:
         for attr in attrs:
             self.attributes.add(attr)
 
-    def is_zombie(self):
+    def is_zombie(self) -> bool:
         return ZOMBIE_ATTR in self.attributes
 
-    def label(self):
+    def label(self) -> str:
         try:
             # old kunai logs
             file = self.root[".data.exe.file"]
@@ -105,7 +106,7 @@ class Task:
             file = self.root[".data.exe.path"]
 
         if len(self.attributes) == 0 and len(self.capa) == 0:
-            return file
+            return file  # ty:ignore[invalid-return-type]
 
         capas = "|".join(sorted(self.capa))
         if len(self.capa) > 0 and len(self.attributes) == 0:
@@ -117,8 +118,8 @@ class Task:
 
         return "{{ {} }} | {{{}}} ".format(file, attrs)
 
-    def capabilities(self):
-        def has_item(f):
+    def capabilities(self) -> None:
+        def has_item(f: Iterator[Event]) -> bool:
             try:
                 f.__next__()
                 return True
@@ -157,15 +158,15 @@ class Task:
             return Color("black", red)
         return DEFAULT_NODE_COLOR
 
-    def filter_nodes(self, kind) -> filter:
+    def filter_nodes(self, kind: str) -> Iterator[Event]:
         return filter(lambda n: n.kind() == kind, self.nodes)
 
     @property
-    def connect(self):
+    def connect(self) -> Iterator[Event]:
         return self.filter_nodes("connect")
 
     @property
-    def send_data(self):
+    def send_data(self) -> Iterator[Event]:
         return self.filter_nodes("send_data")
 
     def data_sent(self, dst_ip: str, dst_port: int) -> int:
@@ -193,28 +194,22 @@ class Task:
 
 
 class KunaiGraph:
-    def __init__(self):
-        self._tasks = {}
-        self._clones = {}
+    def __init__(self) -> None:
+        self._tasks: dict[str, Task] = {}
         self._finalized = False
 
-    def _real_parent(self, guuid):
-        return self._tasks[guuid].root[".info.parent_task.guuid"]
+    def _real_parent(self, guuid: str) -> str:
+        return self._tasks[guuid].root[".info.parent_task.guuid"]  # ty:ignore[invalid-return-type]
 
-    def has_task(self, guuid):
+    def has_task(self, guuid: str) -> bool:
         return guuid in self._tasks
 
-    def from_iterator(self, iterator):
+    def from_iterator(self, iterator: Iterable[JqDict]) -> None:
         for jq_dict in iterator:
             self.update(jq_dict)
         self.finalize()
 
-    def from_event_iterator(self, iterator):
-        for event in iterator:
-            self.update(event.jq_dict())
-        self.finalize()
-
-    def update(self, jq_dict: JqDict):
+    def update(self, jq_dict: JqDict) -> None:
         jq_dict["data"]
         info = jq_dict["info"]
         event_type = info["event.name"]  # ty:ignore[not-subscriptable]
@@ -245,7 +240,7 @@ class KunaiGraph:
             if evt.task_uuid in self._tasks:
                 self._tasks[evt.task_uuid].add(evt)
 
-    def finalize(self):
+    def finalize(self) -> None:
         if self._finalized:
             return
 
@@ -309,7 +304,7 @@ class KunaiGraph:
             )
 
             if task_node.kind() == "clone":
-                clone_flags = int(task_node[".data.flags"], 16)
+                clone_flags = int(task_node[".data.flags"], 16)  # ty:ignore[invalid-argument-type]
                 # we handle specific case where CLONE_PARENT | CLONE_THREAD is used
                 # https://elixir.bootlin.com/linux/v6.9.5/source/kernel/fork.c#L2519
                 # in this case parent is not current task at clone time
@@ -384,9 +379,9 @@ class KunaiGraph:
                     )
 
                     label = "con"
-                    color = color_from_bool(con[".data.connected"])
-                    if task.has_sent_data(dst_ip, dst_port):
-                        byte_sent = task.data_sent(dst_ip, dst_port)
+                    color = color_from_bool(con[".data.connected"])  # ty:ignore[invalid-argument-type]
+                    if task.has_sent_data(dst_ip, dst_port):  # ty:ignore[invalid-argument-type]
+                        byte_sent = task.data_sent(dst_ip, dst_port)  # ty:ignore[invalid-argument-type]
                         label = f"send: {byte_sent}B"
                         color = "blue"
 
@@ -420,7 +415,7 @@ class KunaiGraph:
                         fontcolor=NET_NODE_COLOR.font,
                     )
 
-                    byte_sent = task.data_sent(dst_ip, dst_port)
+                    byte_sent = task.data_sent(dst_ip, dst_port)  # ty:ignore[invalid-argument-type]
                     label = f"send: {byte_sent}B"
 
                     dot.edge(
@@ -445,6 +440,6 @@ class KunaiGraph:
 
         return out
 
-    def to_svg(self, filename: str):
+    def to_svg(self, filename: str) -> None:
         with open(filename, "wb") as fd:
             fd.write(self.to_svg_bytes())

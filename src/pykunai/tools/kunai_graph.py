@@ -1,17 +1,14 @@
-import os
-import shutil
+from collections.abc import Iterator
+from pathlib import Path
 import argparse
 import sys
 import json
-import graphviz
-import tempfile
-import uuid
 
 from pykunai.event import JqDict
 from pykunai.graph import KunaiGraph
 
 
-def decode_logs(path):
+def decode_logs(path: str | Path) -> Iterator[JqDict]:
     if path == "-":
         for line in map(lambda x: x.strip(), sys.stdin):
             yield JqDict(json.loads(line))
