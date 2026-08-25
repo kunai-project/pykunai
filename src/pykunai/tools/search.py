@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import argparse
-import json
-import sys
 import logging
-import re
 import hashlib
 
-from pykunai.event import Query, Event
+from pykunai.event import Query
 from pykunai.utils import decode_events
 
 logger = logging.Logger(__file__)
 
 
-def sha256_file(file_path):
+def sha256_file(file_path: str | Path) -> str:
     sha256 = hashlib.sha256()
 
     with open(file_path, "rb") as file:
@@ -23,7 +21,7 @@ def sha256_file(file_path):
     return sha256.hexdigest()
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Helper script to easily search in Kunai logs"
     )
@@ -41,7 +39,11 @@ def main():
     parser.add_argument("-c", "--hashes", type=str, help="Search by hash (comma split)")
     parser.add_argument("-F", "--file", type=str, help="Hash file and search by hash")
     parser.add_argument(
-        "-p", "--paths", type=str, help="Search by exe path (comma split)"
+        "-p",
+        "--paths",
+        type=str,
+        action="append",
+        help="Search by exe path",
     )
     parser.add_argument(
         "-f",
@@ -70,7 +72,9 @@ def main():
     if args.filters:
         query.add_filters(args.filters.split(","))
     if args.paths:
-        query.add_exe_path_hit_once(args.paths.split(","))
+        query.add_exe_path_hit_once(
+            args.paths
+        )
 
     for event in eg:
         if query.match(event):

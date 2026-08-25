@@ -23,13 +23,24 @@ def main() -> None:
         description="Transform kunai logs to mermaid graph"
     )
     parser.add_argument("-o", "--output", type=str, required=True, help="Ouptut file")
+    parser.add_argument(
+        "-f",
+        "--format",
+        choices=["svg", "dot"],
+        default="svg",
+        help="Output format. Default: svg",
+    )
     parser.add_argument("KUNAI_LOGS", default="-", help="Kunai logs. Default: stdin")
 
     args = parser.parse_args()
 
     g = KunaiGraph()
     g.from_iterator(decode_logs(args.KUNAI_LOGS))
-    g.to_svg(args.output)
+
+    if args.format == "dot":
+        g.save_dot(args.output)
+    else:
+        g.to_svg(args.output)
 
 
 if __name__ == "__main__":

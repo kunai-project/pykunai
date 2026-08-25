@@ -254,11 +254,8 @@ class KunaiGraph:
 
         self._finalized = True
 
-    def to_svg_bytes(self) -> bytes:
+    def _build_dot(self) -> graphviz.Digraph:
         self.finalize()
-
-        tmp_dir = tempfile.mkdtemp(suffix="kunai-graph")
-        tmp_out = os.path.join(tmp_dir, "graph")
 
         dot = graphviz.Digraph(
             comment="Process Activity Graph",
@@ -433,6 +430,14 @@ class KunaiGraph:
                     )
                     marked_con.add(dst_node)
 
+        return dot
+
+    def to_svg_bytes(self) -> bytes:
+        dot = self._build_dot()
+
+        tmp_dir = tempfile.mkdtemp(suffix="kunai-graph")
+        tmp_out = os.path.join(tmp_dir, "graph")
+
         dot.render(tmp_out, format="svg")
 
         out = bytes()
@@ -448,3 +453,10 @@ class KunaiGraph:
     def to_svg(self, filename: str) -> None:
         with open(filename, "wb") as fd:
             fd.write(self.to_svg_bytes())
+
+    def to_dot(self) -> str:
+        return self._build_dot().source
+
+    def save_dot(self, filename: str) -> None:
+        with open(filename, "w") as fd:
+            fd.write(self.to_dot())
